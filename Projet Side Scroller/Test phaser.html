@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" /><title>Mon 1er jeu Phaser</title>
+<script
+src="//cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+
+<style type="text/css"> body { margin: 0; }</style>
+</head>
+<body>
+<script type="text/javascript">
+
+var player;
+var cursors;
+var platforms;
+var stars;
+var score=0;
+var scoreText;
+var bombs;
+var gameOver= false;
+var playerhp = 3
+
+
+var config = {
+    type: Phaser.AUTO,
+    width: 1600, height: 700,
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 1200 },
+            debug: true
+        }},
+    input:{gamepad:true},
+    scene: {preload: preload, create: create, update: update }
+
+    
+};
+
+new Phaser.Game(config);
+
+var platforms;
+var player;
+//variable clavier et manette
+var cursors;
+var controller=false;
+
+var cameras;
+var mechant;
+var mechantvelocity = 100;
+var degatmechant=25;
+var playerLife = 100;
+var peutsefairetoucher = true;
+var playerdroite = true;
+var playergauche = true;
+var playersaut = true;
+
+
+
+var walljump = true;
+
+
+
+
+let keyA;
+
+var gameOver =false;
+
+//Cooldown du personnage quand il subit des degats.
+
+function coulddowndegat(){
+    peutsefairetoucher = true;
+    player.setTint(0xffffff)
+
+
+}
+
+
+// Dégats du personnage.
+
+function playerDegats()
+{
+    if (peutsefairetoucher){
+        peutsefairetoucher = false;
+        console.log(playerhp)
+        playerhp -= 2;
+        if (playerhp <= 0)
+        {
+            lifeUI.anims.play('midLife', true);
+            gameOver = true;
+            player.setTint(0xff0000)
+        }
+        player.setTint(0xff0000)
+        setTimeout(coulddowndegat,1000);
+        
+    }
+}
+
+function degatmechant(){
+
+
+}
+         
+function preload(){
+    this.load.image('sky', 'assets/Backgroundmodif.png');
+    
+    // chargement de la barre de vie
+    this.load.image('mainPv','assets/ui/bottlelife.png');
+    
+    //chargement des Spritesheet
+    this.load.spritesheet('lifeUI','assets/ui/lifesheet.png',
+        {frameWidth:96, frameHeight:96});
+
+    //this.load.spritesheet('')
+
+    
+    
+    this.load.spritesheet('perso','assets/monperso.png',
+        { frameWidth: 32, frameHeight: 48 });
+
+    // chargement tuiles de jeu
+    this.load.image("Phaser_tuilesdejeu", "assets/Tileset.png");
+
+    
+    
+    this.load.tilemapTiledJSON("carte", "assets/tuile_de_jeu.json"); 
+    
+    this.load.image("mechant", "assets/monstretest.gif",);
+
+
+}
+
+
+function create (){
+    //Création de la caméra
+    //this.cameras.main.setSize(800,600);
+    this.cameras.main.setBounds(0,0,1600,1600);
+     
+    this.add.image(0,0,'sky').setOrigin(0,0);
+
+    // chargement de la carte
+    const carteDuNiveau = this.add.tilemap("carte");
+
+    // chargement du jeu de tuiles
+    const tileset = carteDuNiveau.addTilesetImage(
+        "Tileset",
+        "Phaser_tuilesdejeu"
+        
+    );  
+
+    // chargement du calque calque_background
+    const plateformes = carteDuNiveau.createLayer(
+          "calque_plateforme",
+          tileset
+    );
+
+    // chargement du calque calque_piques
+
+    const traps = carteDuNiveau.createLayer(
+            "calque_pique",
+            tileset
+
+    );
+
+    // Fonction pour diminuer la hitbox de mes piques.
+
+    
+
+    //collission 
+    console.log(plateformes)
+    plateformes.setCollisionByProperty({ estSolide: true }); 
+    traps.setCollisionByProperty({ estSolide: true });
+
+    // Colision du joueur
+    player = this.physics.add.sprite(25, 1440, 'perso');
+    player.setBounce(0.3);
+    player.setCollideWorldBounds(true);
+
+    //méchant
+
+    mechant = this.physics.add.sprite(300, 1440, 'mechant');
+
+    mechant.setBounce(0.3);
+    mechant.setCollideWorldBounds(true);
+    
+    //
+    this.physics.add.collider(player, plateformes);
+    this.physics.add.collider(player,traps,mortpersonnage,null,this);
+
+    //
+    this.physics.add.collider(mechant, plateformes);
+    this.physics.add.collider(player,mechant,playerDegats,null,this);
+
+    this.anims.create({
+    key: 'left',
+    frames: this.anims.generateFrameNumbers('perso', {start:0,end:3}),
+    frameRate: 10,
+    repeat: -1
+    });
+    this.anims.create({
+    key: 'turn',
+    frames: [ { key: 'perso', frame: 4 } ],
+    frameRate: 20
+    });
+    this.anims.create({
+    key: 'right',
+    frames: this.anims.generateFrameNumbers('perso', {start:5,end:8}),
+    frameRate: 10,
+    repeat: -1
+    });
+    cursors = this.input.keyboard.createCursorKeys();
+
+   
+    this.physics.world.setBounds (0,0, 1600,1600);
+    this.cameras.main.startFollow (player);
+
+    //set camera (deadzone...)
+
+    //affichage de l'ui
+    lifeUI = this.add.sprite(0,0, 'lifeUI').setOrigin(0,0).setScrollFactor(0);
+    this.add.sprite(0,0,'mainPv').setOrigin(0,0).setScrollFactor(0);
+
+    //détection de la manette 
+
+    this.input.gamepad.once('connected',function(pad){
+        controller = pad;
+    });
+    
+
+    this.anims.create({
+        key: 'maxLife',
+        frames: this.anims.generateFrameNumbers('lifeUI', {start:0,end:1}),
+        frameRate: 2,
+        repeat: -1
+    })
+
+    this.anims.create({
+        key: 'midLife',
+        frames: this.anims.generateFrameNumbers('lifeUI', {start:2,end:3}),
+        frameRate: 2,
+        repeat: -1
+    })
+
+    this.anims.create({
+        key: 'lowLife',
+        frames: this.anims.generateFrameNumbers('lifeUI', {start:4,end:5}),
+        frameRate: 2,
+        repeat: -1
+    })
+}
+
+
+
+function update(){
+    //restart petit problème...
+    if (gameOver ==true){
+        gameOver=false;
+        playerLife=3
+        this.scene.restart();
+    }
+
+
+    if (playerLife == 3){
+        lifeUI.anims.play('maxLife', true);
+    }
+    if (playerLife == 2){
+        lifeUI.anims.play('midLife', true);
+    }
+    if (playerLife == 1){
+        lifeUI.anims.play('lowLife', true);
+    }
+
+    
+    if (cursors.left.isDown){ //si la touche gauche est appuyée
+        player.setVelocityX(-175); //alors vitesse négative en X
+        player.anims.play('left', true); //et animation => gauche
+        }
+        else if (cursors.right.isDown){ //sinon si la touche droite est appuyée
+        player.setVelocityX(175); //alors vitesse positive en X
+        player.anims.play('right', true); //et animation => droite
+        }
+        else{ // sinon
+        player.setVelocityX(0); //vitesse nulle
+        player.anims.play('turn'); //animation fait face caméra
+        }
+        if (cursors.up.isDown && player.body.blocked.down){
+        //si touche haut appuyée ET que le perso touche le sol
+        player.setVelocityY(-500); //alors vitesse verticale négative
+        //(on saute)
+        }
+        
+        if(cursors.up.isDown && player.body.blocked.right){ // si la touche du haut est appuyée
+        // et qu'il touhe un mur en allant vers la droite.    
+        
+        player.setVelocityY(-200) // alors vitesse verticale négative 
+        }
+        if(cursors.up.isDown && player.body.blocked.left){ // si la touche du est appuyée 
+        // et qu'il touche un mur en allant vers la gauche.
+
+        player.setVelocityY(-200)
+     }
+
+    deplacementmechant();
+    mechant.setVelocityX(mechantvelocity)
+     
+} 
+ 
+//Blocage des touches pour le walljump
+    function blocageTouche(){
+    walljump=true;
+}
+
+
+
+
+// cooldown du Wall Jump
+function cdWallJump() {
+                walljump = true;
+            }
+
+
+
+
+function deplacementmechant (){
+    if (mechant.body.position.x<105)
+    {
+        mechantvelocity = 50
+    }
+    if (mechant.body.position.x>300
+    )
+    {
+        mechantvelocity = -50
+    }
+
+}
+function mortpersonnage(player){
+this.physics.pause();
+player.setTint(0xff0000);
+player.anims.play('turn');
+
+}
+
+
+
+
+</script>
+</body>
+</html>
+
+
+
+
