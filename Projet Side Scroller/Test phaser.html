@@ -24,6 +24,12 @@ var playerhp = 3
 var config = {
     type: Phaser.AUTO,
     width: 1600, height: 700,
+    render: { // anti pixel
+        antialias: false
+    },
+    input:{ // manette controle
+        gamepad : true
+    },
     physics: {
         default: 'arcade',
         arcade: {
@@ -38,11 +44,11 @@ var config = {
 
 new Phaser.Game(config);
 
-var platforms;
-var player;
+
 //variable clavier et manette
 var cursors;
-var controller=false;
+var gamepad;
+var gamepadButtons;
 
 var cameras;
 var mechant;
@@ -219,11 +225,7 @@ function create (){
     lifeUI = this.add.sprite(0,0, 'lifeUI').setOrigin(0,0).setScrollFactor(0);
     this.add.sprite(0,0,'mainPv').setOrigin(0,0).setScrollFactor(0);
 
-    //détection de la manette 
-
-    this.input.gamepad.once('connected',function(pad){
-        controller = pad;
-    });
+   
     
 
     this.anims.create({
@@ -246,6 +248,25 @@ function create (){
         frameRate: 2,
         repeat: -1
     })
+    this.input.gamepad.on('connected', () => { // controle manette fonction 
+            gamepad = this.input.gamepad.pad1;
+            console.log("Controller connected!");
+
+            // see https://phaser.io/examples/v3/view/input/gamepad/gamepad-debug to identify the buttons indexes
+            gamepadButtons = {
+                'left': gamepad.buttons[14],
+                'right': gamepad.buttons[15],
+                'jump': gamepad.buttons[0],
+                'pause': gamepad.buttons[9],
+            };
+
+            gamepadConnected = true;
+        });
+
+        this.input.gamepad.on('disconnected', () => {
+            console.log("Controller disconnected!");
+            gamepadConnected = false;
+        });
 }
 
 
@@ -270,11 +291,11 @@ function update(){
     }
 
     
-    if (cursors.left.isDown){ //si la touche gauche est appuyée
+    if (cursors.left.isDown || gamepadButtons?.left.pressed){ //si la touche gauche est appuyée
         player.setVelocityX(-175); //alors vitesse négative en X
         player.anims.play('left', true); //et animation => gauche
         }
-        else if (cursors.right.isDown){ //sinon si la touche droite est appuyée
+        else if (cursors.right.isDown || gamepadButtons?.right.pressed){ //sinon si la touche droite est appuyée
         player.setVelocityX(175); //alors vitesse positive en X
         player.anims.play('right', true); //et animation => droite
         }
@@ -282,18 +303,18 @@ function update(){
         player.setVelocityX(0); //vitesse nulle
         player.anims.play('turn'); //animation fait face caméra
         }
-        if (cursors.up.isDown && player.body.blocked.down){
+        if ((cursors.up.isDown|| gamepadButtons?.jump.pressed) && player.body.blocked.down){
         //si touche haut appuyée ET que le perso touche le sol
         player.setVelocityY(-500); //alors vitesse verticale négative
         //(on saute)
         }
         
-        if(cursors.up.isDown && player.body.blocked.right){ // si la touche du haut est appuyée
+        if((cursors.up.isDown|| gamepadButtons?.jump.pressed) && player.body.blocked.right){ // si la touche du haut est appuyée
         // et qu'il touhe un mur en allant vers la droite.    
         
         player.setVelocityY(-200) // alors vitesse verticale négative 
         }
-        if(cursors.up.isDown && player.body.blocked.left){ // si la touche du est appuyée 
+        if((cursors.up.isDown|| gamepadButtons?.jump.pressed) && player.body.blocked.left){ // si la touche du est appuyée 
         // et qu'il touche un mur en allant vers la gauche.
 
         player.setVelocityY(-200)
